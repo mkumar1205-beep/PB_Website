@@ -3,9 +3,9 @@ import mongoose, { Schema, Document } from "mongoose";
 interface Participant {
   name: string;
   email: string;
-  age: number;
   gender: "Male" | "Female" | "Other" | "Prefer not to say";
   phone: string;
+  role: "Leader" | "Member";
   background: Background;
 }
 
@@ -25,6 +25,7 @@ interface TempCTFUser {
 }
 
 export interface Registration extends Document {
+  teamName?: string;
   participant1: Participant;
   participant2?: Participant;
   participationType: "solo" | "duo";
@@ -57,13 +58,14 @@ const backgroundSchema = new Schema({
 const participantSchema = new Schema<Participant>({
   name: { type: String, required: true },
   email: { type: String, required: true },
-  //age: { type: Number, required: true },
+  role: { type: String, enum: ["Leader", "Member"], required: true},
   gender: { type: String, enum: ["Male", "Female", "Other", "Prefer not to say"], required: true },
   background: { type: backgroundSchema, required: true },
   phone: { type: String, required: true },
 });
 
 const registrationSchema = new Schema<Registration>({
+  teamName: { type: String},
   participant1: { type: participantSchema, required: true },
   participant2: {
     type: participantSchema,
