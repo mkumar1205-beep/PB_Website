@@ -85,7 +85,7 @@ export default async function RootLayout({
       {process.env.NEXT_PUBLIC_GTM_ID && (
         <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
       )}
-
+    <head>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -103,6 +103,7 @@ export default async function RootLayout({
           }),
         }}
       />
+    </head>
 
       <body className={`bg-pbpages ${lexand.className}`}>
         <Analytics
