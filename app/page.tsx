@@ -1,42 +1,30 @@
 import type { Metadata } from "next";
 import HomeClient from "@/components/homepage/HomeClient";
+import { safeJsonLd } from "@/lib/seo/jsonld";
+import { buildMetadata } from "@/lib/seo/metadata";
 
-const PAGE_TITLE = "Point Blank | Student Run Open Source Community from India";
-const PAGE_DESCRIPTION =
-  "Point Blank is a student run open source community. We are a group of tech enthusiasts who love to learn and grow together.";
-const PAGE_URL = "https://www.pointblank.club";
+const SITE_URL = "https://www.pointblank.club";
 
-export const metadata: Metadata = {
-  title: PAGE_TITLE,
-  description: PAGE_DESCRIPTION,
-  alternates: {
-    canonical: PAGE_URL,
-  },
-  openGraph: {
-    title: PAGE_TITLE,
-    description: PAGE_DESCRIPTION,
-    url: PAGE_URL,
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: PAGE_TITLE,
-    description: PAGE_DESCRIPTION,
-  },
-};
+export const metadata = buildMetadata({
+  path: "/",
+  absoluteTitle: "Point Blank | Student Run Open Source Community from India",
+  description:
+    "Point Blank is a student run open source community. We are a group of tech enthusiasts who love to learn and grow together.",
+});
 
 export default function Home() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Point Blank",
+    url: SITE_URL,
+  };
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "WebSite",
-            name: "Point Blank",
-            url: PAGE_URL,
-          }),
+          __html: safeJsonLd(jsonLd),
         }}
       />
       <HomeClient />

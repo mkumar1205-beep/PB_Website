@@ -13,6 +13,8 @@ import ico from "@/public/favicon.ico";
 import ReactLenis from "lenis/react";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 import { Toaster } from "react-hot-toast";
+import { safeJsonLd } from "@/lib/seo/jsonld";
+import { SITE_NAME, DEFAULT_DESCRIPTION, SITE_URL, DEFAULT_OG_IMAGE } from "@/lib/seo/constants";
 
 const lexand = Lexend({
   subsets: ["latin"],
@@ -20,41 +22,31 @@ const lexand = Lexend({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.pointblank.club"),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Point Blank",
-    template: "%s | Point Blank",
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "Point Blank is a student run tech community. We are a group of tech enthusiasts who love to learn and grow together.",
-  keywords: ["Point Blank", "student tech community India", "open source community India", "Point Blank coding club", "Point Blank Club", "Point Blank India", "Point Blank tech community", "Point Blank coding club", "Point Blank open source", "student developers India", "developer community India", "college tech community", "student coding community", "open source contributors", "open source development"],
-  authors:[{name: "Point Blank"}],
+  description: DEFAULT_DESCRIPTION,
+  keywords: ["Point Blank", "student tech community India", "open source community India", "Point Blank Club", "Point Blank India", "Point Blank tech community", "Point Blank coding club", "Point Blank open source", "student developers India", "developer community India", "college tech community", "student coding community", "open source contributors", "open source development"],
+  authors:[{name: SITE_NAME}],
   icons: {
     icon: ico.src,
   },
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://www.pointblank.club",
-    title: "Point Blank",
-    description:
-      "Point Blank is a student run open source community. We are a group of tech enthusiasts who love to learn and grow together.",
-    siteName: "Point Blank",
-    images: [
-      {
-        url: "/og-image.png", 
-        width: 1200,
-        height: 630,
-        alt: "Point Blank",
-      },
-    ],
+    url: SITE_URL,
+    title: SITE_NAME,
+    description: DEFAULT_DESCRIPTION, 
+    siteName: SITE_NAME,
+    images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Point Blank",
-    description:
-      "Point Blank is a student run open source community.",
-    images: ["/og-image.png"],
+    title: SITE_NAME,
+    description: DEFAULT_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
   },
   robots: {
     index: true,
@@ -67,7 +59,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://www.pointblank.club",
+    canonical: SITE_URL,
   },
 };
 
@@ -80,32 +72,29 @@ export default async function RootLayout({
   const sessionCookie = cookieStore.get("session");
   const user = sessionCookie ? (await verifyAuth(sessionCookie.value)) || null : null;
 
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: `${SITE_URL}${DEFAULT_OG_IMAGE.url}`,
+    sameAs: [
+      "https://x.com/pointblank_club",
+      "https://instagram.com/pointblank_club_",
+      "https://linkedin.com/company/pointblank-club",
+    ],
+  };
   return (
     <html lang="en-IN">
       {process.env.NEXT_PUBLIC_GTM_ID && (
         <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
       )}
-    <head>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Organization",
-            name: "Point Blank",
-            url: "https://www.pointblank.club",
-            logo: "https://www.pointblank.club/og-image.png",
-            sameAs: [
-              "https://x.com/pointblank_club",
-              "https://instagram.com/pointblank_club_",
-              "https://linkedin.com/company/pointblank-club",
-            ],
-          }),
-        }}
-      />
-    </head>
 
       <body className={`bg-pbpages ${lexand.className}`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationJsonLd) }}
+        />
         <Analytics
           websiteId={process.env.NEXT_PUBLIC_HELLYEAH_TRACKER_ID as string}
           env={process.env.NEXT_PUBLIC_HELLYEAH_TRACKER_ENV}
