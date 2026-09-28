@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import OssDashboard from "@/components/oss/OssDashboard";
+import { buildMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
+  path: "/oss",
   title: "OSS",
-  description: "Point Blank open source contributions and merged pull requests.",
-};
+  description:
+    "Open source contributions and merged pull requests of Point Blank members.",
+});
 
 export default function OssPage() {
   return (

@@ -13,6 +13,8 @@ import ico from "@/public/favicon.ico";
 import ReactLenis from "lenis/react";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 import { Toaster } from "react-hot-toast";
+import { safeJsonLd } from "@/lib/seo/jsonld";
+import { SITE_NAME, DEFAULT_DESCRIPTION, SITE_URL, DEFAULT_OG_IMAGE } from "@/lib/seo/constants";
 
 const lexand = Lexend({
   subsets: ["latin"],
@@ -20,11 +22,44 @@ const lexand = Lexend({
 });
 
 export const metadata: Metadata = {
-  title: "Point Blank",
-  description:
-    "Point Blank is a student-run tech community. We are a group of tech enthusiasts who love to learn and grow together.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: DEFAULT_DESCRIPTION,
+  keywords: ["Point Blank", "student tech community India", "open source community India", "Point Blank Club", "Point Blank India", "Point Blank tech community", "Point Blank coding club", "Point Blank open source", "student developers India", "developer community India", "college tech community", "student coding community", "open source contributors", "open source development"],
+  authors:[{name: SITE_NAME}],
   icons: {
     icon: ico.src,
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: SITE_URL,
+    title: SITE_NAME,
+    description: DEFAULT_DESCRIPTION, 
+    siteName: SITE_NAME,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: DEFAULT_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  alternates: {
+    canonical: SITE_URL,
   },
 };
 
@@ -37,13 +72,29 @@ export default async function RootLayout({
   const sessionCookie = cookieStore.get("session");
   const user = sessionCookie ? (await verifyAuth(sessionCookie.value)) || null : null;
 
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: DEFAULT_OG_IMAGE.url,
+    sameAs: [
+      "https://x.com/pointblank_club",
+      "https://instagram.com/pointblank_club_",
+      "https://linkedin.com/company/pointblank-club",
+    ],
+  };
   return (
-    <html lang="en_IN">
+    <html lang="en-IN">
       {process.env.NEXT_PUBLIC_GTM_ID && (
         <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
       )}
 
       <body className={`bg-pbpages ${lexand.className}`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationJsonLd) }}
+        />
         <Analytics
           websiteId={process.env.NEXT_PUBLIC_HELLYEAH_TRACKER_ID as string}
           env={process.env.NEXT_PUBLIC_HELLYEAH_TRACKER_ENV}
