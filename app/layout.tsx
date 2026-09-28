@@ -77,7 +77,7 @@ export default async function RootLayout({
     "@type": "Organization",
     name: SITE_NAME,
     url: SITE_URL,
-    logo: `${SITE_URL}${DEFAULT_OG_IMAGE.url}`,
+    logo: DEFAULT_OG_IMAGE.url,
     sameAs: [
       "https://x.com/pointblank_club",
       "https://instagram.com/pointblank_club_",
