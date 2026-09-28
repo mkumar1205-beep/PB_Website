@@ -82,6 +82,10 @@ export default function ThreeBackground() {
     const frameMat = new THREE.MeshBasicMaterial({
       color: GAP_NEON,
       side: THREE.DoubleSide,
+      // Solid neon slabs were what actually swallowed text when keys lifted.
+      // The hover outlines carry the effect; these only need to suggest depth.
+      transparent: true,
+      opacity: 0.45,
     });
 
     for (let r = 0; r < ROWS; r++) {
@@ -208,7 +212,14 @@ export default function ThreeBackground() {
     camera.lookAt(0, 0, 0);
 
     // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+    } catch (err) {
+      // No WebGL2 (blocklisted GPU, acceleration off): keep the plain black background instead of crashing the page
+      console.warn("ThreeBackground disabled:", err);
+      return;
+    }
     renderer.setSize(W0, H0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     const el = renderer.domElement;
