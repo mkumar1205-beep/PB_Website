@@ -1,17 +1,3 @@
-/**
- * Every achievement category takes an optional proof link in the admin UI.
- * This file holds the per-category label / placeholder and, where we are
- * confident about it, the host(s) an official link should live on.
- * Client-safe (no server imports).
- *
- * The domain check is a *hint*, not a block: the editor shows a warning if the
- * pasted link doesn't look official, but saving is still allowed. A category
- * with an empty `officialHosts` list gets no domain warning at all (hackathon
- * results, for example, are hosted all over the place). The hard server-side
- * rule (https only) lives in lib/server/achievementLinks.ts.
- *
- * To add a domain warning for a category later, fill in its `officialHosts`.
- */
 export const LINK_CATEGORIES = [
   "GSoC",
   "LFX",
