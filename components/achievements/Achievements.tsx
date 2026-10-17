@@ -316,7 +316,7 @@ export default function Achievements({
     }));
    };
 
-  // GSoC / LFX entries that still have no link (shown as a nudge in the editor)
+  // entries that still have no link (shown as a nudge in the editor)
   const missingLinkCount = DB_CATEGORIES.filter(supportsLink).reduce(
     (sum, cat) =>
       sum + (editAchivements[cat] ?? []).filter((e) => !e.url?.trim()).length,
@@ -767,9 +767,9 @@ export default function Achievements({
           <div className="flex flex-col gap-4 py-2">
             {missingLinkCount > 0 && (
               <p className="text-[11px] text-yellow-500/90">
-                {missingLinkCount} GSoC/LFX{" "}
+                {missingLinkCount} {" "}
                 {missingLinkCount === 1 ? "entry has" : "entries have"} no
-                link yet.
+                links yet.
               </p>
             )}
             {/* Existing entries per category */}

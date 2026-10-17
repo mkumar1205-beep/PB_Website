@@ -1,4 +1,27 @@
-export type LinkCategory = "GSoC" | "LFX";
+/**
+ * Every achievement category takes an optional proof link in the admin UI.
+ * This file holds the per-category label / placeholder and, where we are
+ * confident about it, the host(s) an official link should live on.
+ * Client-safe (no server imports).
+ *
+ * The domain check is a *hint*, not a block: the editor shows a warning if the
+ * pasted link doesn't look official, but saving is still allowed. A category
+ * with an empty `officialHosts` list gets no domain warning at all (hackathon
+ * results, for example, are hosted all over the place). The hard server-side
+ * rule (https only) lives in lib/server/achievementLinks.ts.
+ *
+ * To add a domain warning for a category later, fill in its `officialHosts`.
+ */
+export const LINK_CATEGORIES = [
+  "GSoC",
+  "LFX",
+  "SIH",
+  "LIFT",
+  "Hackathons",
+  "CP",
+  "ACM",
+] as const;
+export type LinkCategory = (typeof LINK_CATEGORIES)[number];
 
 const LINK_CONFIG: Record<
   LinkCategory,
@@ -14,15 +37,42 @@ const LINK_CONFIG: Record<
     placeholder: "https://mentorship.lfx.linuxfoundation.org/project/...",
     officialHosts: ["linuxfoundation.org"],
   },
+  SIH: {
+    label: "SIH result link",
+    placeholder: "https://... (official SIH result / announcement page)",
+    officialHosts: [],
+  },
+  LIFT: {
+    label: "LIFT link",
+    placeholder: "https://... (official page for this achievement)",
+    officialHosts: [],
+  },
+  Hackathons: {
+    label: "Hackathon result link",
+    placeholder: "https://... (organizer's results page or project submission)",
+    officialHosts: [],
+  },
+  CP: {
+    label: "Contest / profile link",
+    placeholder: "https://codeforces.com/profile/... or contest standings",
+    officialHosts: [],
+  },
+  ACM: {
+    label: "ACM link",
+    placeholder: "https://... (official page for this achievement)",
+    officialHosts: [],
+  },
 };
 
 export function supportsLink(category: string): category is LinkCategory {
-  return category === "GSoC" || category === "LFX";
+  return (LINK_CATEGORIES as readonly string[]).includes(category);
 }
 
 export function linkConfig(category: LinkCategory) {
   return LINK_CONFIG[category];
 }
+
+/** Returns a warning string if `url` is set but looks wrong, else null. */
 export function officialLinkWarning(
   category: string,
   url: string | undefined,
@@ -36,10 +86,10 @@ export function officialLinkWarning(
   } catch {
     return "This doesn't look like a valid URL";
   }
-  const ok = LINK_CONFIG[category].officialHosts.some(
-    (h) => host === h || host.endsWith(`.${h}`),
-  );
+  const { officialHosts } = LINK_CONFIG[category];
+  if (officialHosts.length === 0) return null; // no domain rule for this category
+  const ok = officialHosts.some((h) => host === h || host.endsWith(`.${h}`));
   return ok
     ? null
-    : `This doesn't look like an official ${category} link (expected ${LINK_CONFIG[category].officialHosts[0]}). You can still save it.`;
+    : `This doesn't look like an official ${category} link (expected ${officialHosts[0]}). You can still save it.`;
 }
