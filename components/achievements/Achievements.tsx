@@ -24,8 +24,14 @@ import {
 } from "@/components/ui/select";
 import Image from "next/image";
 import { serializeId } from "@/lib/utils";
+import {
+  supportsLink,
+  linkConfig,
+  officialLinkWarning,
+} from "@/lib/achievementLinkHints";
 
-type AchievementEntry = { title: string; description?: string };
+
+type AchievementEntry = { title: string; description?: string; url?: string };
 
 type AchievementsDoc = {
   _id: string;
@@ -39,6 +45,7 @@ type AchievementsDoc = {
     Hackathons?: AchievementEntry[];
     CP?: AchievementEntry[];
     ACM?: AchievementEntry[];
+    CTF?: AchievementEntry[];
   };
 };
 
@@ -56,8 +63,20 @@ const DB_CATEGORIES = [
   "Hackathons",
   "CP",
   "ACM",
+  "CTF",
 ] as const;
 type DbCategory = (typeof DB_CATEGORIES)[number];
+
+const HIERARCHY: DbCategory[] = [
+  "LFX",
+  "GSoC",
+  "SIH",
+  "CTF",
+  "Hackathons",
+  "CP",
+  "ACM",
+  "LIFT",
+]
 
 const CATEGORY_FILTER_MAP: Record<DbCategory, string> = {
   GSoC: "GSOC",
@@ -67,6 +86,7 @@ const CATEGORY_FILTER_MAP: Record<DbCategory, string> = {
   Hackathons: "HACKATHONS",
   CP: "CP",
   ACM: "ACM",
+  CTF: "CTF",
 };
 
 const FILTER_CATEGORIES = [
@@ -78,13 +98,14 @@ const FILTER_CATEGORIES = [
   "LIFT",
   "ACM",
   "CP",
+  "CTF",
 ];
 
 const headingText = "We Build. We Ship. We Win.";
 const phrases = headingText.split(". ");
 
 function docToDisplayMember(doc: AchievementsDoc) {
-  const items: { event: string; result: string; category: string }[] = [];
+  const items: { event: string; result: string; category: string; url?: string }[] = [];
 
   for (const cat of DB_CATEGORIES) {
     const entries = doc.achivements[cat] ?? [];
@@ -93,11 +114,12 @@ function docToDisplayMember(doc: AchievementsDoc) {
         event: entry.title,
         result: entry.description ?? "",
         category: CATEGORY_FILTER_MAP[cat],
+        url: entry.url || undefined,
       });
     }
   }
 
-  const achievements: { event: string; result: string; category: string }[][] =
+  const achievements: { event: string; result: string; category: string; url?: string; }[][] =
     [];
   for (let i = 0; i < items.length; i += 2) {
     achievements.push(items.slice(i, i + 2));
@@ -128,6 +150,8 @@ export default function Achievements({
   const [addCategory, setAddCategory] = useState<DbCategory>("GSoC");
   const [addTitle, setAddTitle] = useState("");
   const [addDesc, setAddDesc] = useState("");
+  const [addUrl, setAddUrl] = useState("");
+  const [addError, setAddError] = useState("");
   const [addSaving, setAddSaving] = useState(false);
   const memberDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -138,6 +162,8 @@ export default function Achievements({
   const [newEntryCategory, setNewEntryCategory] = useState<DbCategory>("GSoC");
   const [newEntryTitle, setNewEntryTitle] = useState("");
   const [newEntryDesc, setNewEntryDesc] = useState("");
+  const [newEntryUrl, setNewEntryUrl] = useState("");
+  const [editError, setEditError] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
   const [deleteDoc, setDeleteDoc] = useState<AchievementsDoc | null>(null);
@@ -177,6 +203,8 @@ export default function Achievements({
     setAddCategory("GSoC");
     setAddTitle("");
     setAddDesc("");
+    setAddUrl("");
+    setAddError("");
     setAddOpen(true);
 
     if (allMembers.length === 0) {
@@ -204,6 +232,8 @@ export default function Achievements({
     setNewEntryCategory("GSoC");
     setNewEntryTitle("");
     setNewEntryDesc("");
+    setNewEntryUrl("");
+    setEditError("");
   };
 
   const handleAddSave = async () => {
@@ -219,7 +249,7 @@ export default function Achievements({
             ...existingDoc.achivements,
             [addCategory]: [
               ...(existingDoc.achivements[addCategory] ?? []),
-              { title: addTitle, description: addDesc },
+              { title: addTitle, description: addDesc, url: supportsLink(addCategory) ? addUrl.trim() : undefined },
             ],
           },
         };
@@ -237,13 +267,16 @@ export default function Achievements({
             prev.map((d) => (d._id === existingDoc._id ? updatedDoc : d)),
           );
           setAddOpen(false);
+        } 
+        else {
++          setAddError(data.error ?? "Failed to save");
         }
       } else {
         const payload = {
           name: selectedMember.name,
           imageUrl: selectedMember.imageUrl ?? "",
           achivements: {
-            [addCategory]: [{ title: addTitle, description: addDesc }],
+            [addCategory]: [{ title: addTitle, description: addDesc, url: supportsLink(addCategory) ? addUrl.trim() : undefined }],
           },
         };
         const res = await fetch("/api/achievements", {
@@ -261,6 +294,8 @@ export default function Achievements({
           ) as AchievementsDoc;
           setDocs((prev) => [...prev, newDoc]);
           setAddOpen(false);
+          } else {
++          setAddError(data.error ?? "Failed to save");
         }
       }
     } finally {
@@ -274,12 +309,34 @@ export default function Achievements({
       ...prev,
       [newEntryCategory]: [
         ...(prev[newEntryCategory] ?? []),
-        { title: newEntryTitle, description: newEntryDesc },
+        { title: newEntryTitle, description: newEntryDesc, url:
+            supportsLink(newEntryCategory) && newEntryUrl.trim() ? newEntryUrl.trim(): undefined, },
       ],
     }));
     setNewEntryTitle("");
     setNewEntryDesc("");
+    setNewEntryUrl("");
   };
+
+  const handleEntryUrlChange = (
+    cat: DbCategory,
+    idx: number,
+    value: string,
+  ) => {
+    setEditAchivements((prev) => ({
+      ...prev,
+      [cat]: (prev[cat] ?? []).map((entry, i) =>
+        i === idx ? { ...entry, url: value } : entry,
+      ),
+    }));
+   };
+
+  // entries that still have no link (shown as a nudge in the editor)
+  const missingLinkCount = DB_CATEGORIES.filter(supportsLink).reduce(
+    (sum, cat) =>
+      sum + (editAchivements[cat] ?? []).filter((e) => !e.url?.trim()).length,
+    0,
+  );
 
   const handleRemoveEntry = (cat: DbCategory, idx: number) => {
     setEditAchivements((prev) => ({
@@ -307,6 +364,8 @@ export default function Achievements({
           prev.map((d) => (d._id === editDoc._id ? payload : d)),
         );
         setEditDoc(null);
+         } else {
+            setEditError(data.error ?? "Failed to save");
       }
     } finally {
       setEditSaving(false);
@@ -353,6 +412,16 @@ export default function Achievements({
     .sort((a, b) => {
       const diff = countAchievements(b) - countAchievements(a);
       if (diff !== 0) return diff;
+
+      for (const category of HIERARCHY) {
+
+        const auraDiff =(b.achivements[category]?.length ?? 0) - (a.achivements[category]?.length ?? 0);
+
+        if (auraDiff != 0){
+          return auraDiff
+        }
+      }
+
       return a.name.localeCompare(b.name);
     });
 
@@ -621,7 +690,11 @@ export default function Achievements({
               </Label>
               <Select
                 value={addCategory}
-                onValueChange={(v) => setAddCategory(v as DbCategory)}
+                onValueChange={(v) => {
+                  setAddCategory(v as DbCategory);
+                  if (!supportsLink(v)) setAddUrl("");
+                  setAddError("");
+                }}
               >
                 <SelectTrigger className="w-full bg-pbgray border-pbborder text-white h-8 focus:ring-pbgreen/20 focus:border-pbgreen">
                   <SelectValue />
@@ -663,6 +736,27 @@ export default function Achievements({
                 className="bg-pbgray border-pbborder text-white placeholder:text-pbtext/50 focus-visible:border-pbgreen focus-visible:ring-pbgreen/20 h-8"
               />
             </div>
+            {/* Proof link — GSoC and LFX only */}
+            {supportsLink(addCategory) && (
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-pbtext text-xs">
+                  {linkConfig(addCategory).label}
+                </Label>
+                <Input
+                  type="url"
+                  value={addUrl}
+                  onChange={(e) => setAddUrl(e.target.value)}
+                  placeholder={linkConfig(addCategory).placeholder}
+                  className="bg-pbgray border-pbborder text-white placeholder:text-pbtext/50 focus-visible:border-pbgreen focus-visible:ring-pbgreen/20 h-8"
+                />
+                {officialLinkWarning(addCategory, addUrl) && (
+                  <p className="text-[11px] text-yellow-500/90">
+                    {officialLinkWarning(addCategory, addUrl)}
+                  </p>
+                )}
+              </div>
+            )}
+            {addError && <p className="text-xs text-red-400">{addError}</p>}
           </div>
 
           <DialogFooter className="gap-2 pt-2">
@@ -696,6 +790,13 @@ export default function Achievements({
           </DialogHeader>
 
           <div className="flex flex-col gap-4 py-2">
+            {missingLinkCount > 0 && (
+              <p className="text-[11px] text-yellow-500/90">
+                {missingLinkCount} {" "}
+                {missingLinkCount === 1 ? "entry has" : "entries have"} no
+                links yet.
+              </p>
+            )}
             {/* Existing entries per category */}
             {DB_CATEGORIES.map((cat) => {
               const entries = editAchivements[cat] ?? [];
@@ -719,6 +820,25 @@ export default function Achievements({
                             {entry.description}
                           </p>
                         )}
+                        {supportsLink(cat) && (
+                          <div className="mt-1.5">
+                            <Input
+                              type="url"
+                              value={entry.url ?? ""}
+                              onChange={(e) =>
+                                handleEntryUrlChange(cat, idx, e.target.value)
+                              }
+                              placeholder={linkConfig(cat).placeholder}
+                              aria-label={`${linkConfig(cat).label} for ${entry.title}`}
+                              className="bg-pbpages border-pbborder text-white text-xs placeholder:text-pbtext/40 focus-visible:border-pbgreen focus-visible:ring-pbgreen/20 h-7"
+                            />
+                            {officialLinkWarning(cat, entry.url) && (
+                              <p className="text-[10px] text-yellow-500/90 mt-1">
+                                {officialLinkWarning(cat, entry.url)}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <button
                         type="button"
@@ -739,7 +859,10 @@ export default function Achievements({
               <p className="text-xs text-pbtext font-medium">Add Entry</p>
               <Select
                 value={newEntryCategory}
-                onValueChange={(v) => setNewEntryCategory(v as DbCategory)}
+                onValueChange={(v) => {
+                  setNewEntryCategory(v as DbCategory);
+                  if (!supportsLink(v)) setNewEntryUrl("");
+                }}
               >
                 <SelectTrigger className="w-full bg-pbgray border-pbborder text-white h-8 focus:ring-pbgreen/20 focus:border-pbgreen">
                   <SelectValue />
@@ -766,6 +889,23 @@ export default function Achievements({
                 placeholder="Description / Result"
                 className="bg-pbgray border-pbborder text-white placeholder:text-pbtext/50 focus-visible:border-pbgreen focus-visible:ring-pbgreen/20 h-8"
               />
+              {supportsLink(newEntryCategory) && (
+                <>
+                  <Input
+                    type="url"
+                    value={newEntryUrl}
+                    onChange={(e) => setNewEntryUrl(e.target.value)}
+                    placeholder={linkConfig(newEntryCategory).placeholder}
+                    aria-label={linkConfig(newEntryCategory).label}
+                    className="bg-pbgray border-pbborder text-white placeholder:text-pbtext/50 focus-visible:border-pbgreen focus-visible:ring-pbgreen/20 h-8"
+                  />
+                  {officialLinkWarning(newEntryCategory, newEntryUrl) && (
+                    <p className="text-[11px] text-yellow-500/90 -mt-1">
+                      {officialLinkWarning(newEntryCategory, newEntryUrl)}
+                    </p>
+                  )}
+                </>
+              )}
               <Button
                 type="button"
                 variant="outline"
@@ -779,6 +919,7 @@ export default function Achievements({
             </div>
           </div>
 
+        {editError && <p className="text-xs text-red-400">{editError}</p>}
           <DialogFooter className="gap-2 pt-2">
             <Button
               variant="outline"
